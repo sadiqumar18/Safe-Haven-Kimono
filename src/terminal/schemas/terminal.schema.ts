@@ -2,6 +2,8 @@ import * as mongoose from 'mongoose';
 
 export const terminalSchema = new mongoose.Schema({
   clientId: String,
+  creditAccountNumber: String,
+  creditBankCode: String,
   serialNumber: String,
   terminalId: String,
   isActive: {

@@ -1,0 +1,40 @@
+on:
+  push:
+    branches:
+      - production
+
+name: Build and Deploy App to GCP Production Environment
+
+jobs:
+  deploy:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@master
+
+      - name: Set up gcloud Cloud SDK environment
+        uses: google-github-actions/setup-gcloud@v0.2.0
+        with:
+          project_id: ${{ secrets.PRODUCTION_PROJECT_ID }}
+          service_account_key: ${{ secrets.PRODUCTION_GCP_SA_KEY }}
+          export_default_credentials: true
+
+      - name: Authorize Docker push
+        run: gcloud auth configure-docker
+
+      - name: Build and Push Container
+        run: |-
+          docker build -t gcr.io/${{ secrets.PRODUCTION_PROJECT_ID }}/safe-haven-kimono:${{  github.sha }} ./
+          docker push gcr.io/${{ secrets.PRODUCTION_PROJECT_ID }}/safe-haven-kimono:${{  github.sha }}
+      - name: Deploy to Cloud Run
+        id: deploy
+        uses: google-github-actions/deploy-cloudrun@main
+        with:
+          service: safe-haven-kimono
+          image: gcr.io/${{ secrets.PRODUCTION_PROJECT_ID }}/safe-haven-kimono:${{  github.sha }}
+          credentials: ${{ secrets.PRODUCTION_GCP_SA_KEY }}
+          region: europe-west2
+          secrets: /app/src/environments/.env=safe-haven-kimono-secret:latest
+
+      - name: Use Output
+        run: curl "${{ steps.deploy.outputs.url }}"

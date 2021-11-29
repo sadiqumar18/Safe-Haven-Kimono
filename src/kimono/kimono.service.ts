@@ -70,20 +70,22 @@ export class KimonoService {
       let response = KimonoService.convertXml2Json(res);
 
       if (response.transferResponse) {
-        record = await this.createRecord('74343884399434', '619b8b3f15081dda7283cf09', createKimonoDto, Status.FAILED);
-        return { statusCode: HttpStatus.BAD_REQUEST, message: response.transferResponse.description._text, data: record };
+       // record = await this.createRecord('74343884399434', '619b8b3f15081dda7283cf09', createKimonoDto, Status.FAILED);
+        return { statusCode: HttpStatus.BAD_REQUEST, message: response.transferResponse.description._text, data: {} };
       }
 
       let responseCode = response.channelResponse.field39._text;
 
       if (responseCode != "00") {
         record = await this.createRecord('74343884399434', '619b8b3f15081dda7283cf09', createKimonoDto, Status.SUCCESS);
+        //
         return { statusCode: HttpStatus.BAD_REQUEST, message: response.channelResponse.description._text, data: record };
       }
 
       record = await this.createRecord('74343884399434', '619b8b3f15081dda7283cf09', createKimonoDto, Status.SUCCESS);
       return { statusCode: HttpStatus.OK, message: response.channelResponse.description._text, data: record };
     } catch (e) {
+      console.log(e);
       return {
         statusCode: HttpStatus.BAD_REQUEST,
         message: "Transaction failed"
@@ -131,6 +133,8 @@ export class KimonoService {
       return { statusCode: HttpStatus.OK, message: requeryRes.description,data:{}};
 
     } catch (e) {
+
+      //TODO requery transaction
       return {
         statusCode: HttpStatus.BAD_REQUEST,
         message: "Transaction failed"
@@ -221,11 +225,17 @@ export class KimonoService {
   }
 
   async findAll() {
-    return this.kimonoModel.find({}).populate('terminal').sort({ createdAt: -1 }).exec();
+    const records = await this.kimonoModel.find({}).populate('terminal').sort({ createdAt: -1 }).exec();
+    return { statusCode: HttpStatus.OK, data: records };
   }
 
-  findOne(id: number, clientId: string) {
-    return this.kimonoModel.findOne({ id, clientId }).populate('terminal').exec();
+  async findOne(id: number, clientId: string) {
+    const query = {
+      _id: id,
+      clientId: clientId
+    };
+    const record = await this.kimonoModel.findOne(query).populate('terminal').exec();
+    return { statusCode: HttpStatus.OK, data: record };
   }
 
   update(id: number, updateKimonoDto: UpdateKimonoDto) {

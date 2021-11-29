@@ -7,6 +7,7 @@ import { TerminalModule } from "./terminal/terminal.module";
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.useGlobalPipes(new ValidationPipe());
+  app.setGlobalPrefix('api/v1');
   useContainer(app.select(TerminalModule), {fallbackOnErrors: true});
   await app.listen(3000);
 
