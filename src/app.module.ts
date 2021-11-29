@@ -7,7 +7,7 @@ import { PaygateService } from "./common/services/paygate/paygate.service";
 import { EncryptionService } from "./common/encryption/encryption.service";
 import { TerminalModule } from './terminal/terminal.module';
 import { ConfigModule } from "@nestjs/config";
-import { AppConfig, AppConfigValidationSchema } from "../app.config";
+import { AppConfig, AppConfigValidationSchema } from "./app.config";
 import { MongooseModule } from "@nestjs/mongoose";
 import { kimonoSchema } from "./kimono/schemas/kimono.schema";
 import { EventModule } from './event/event.module';
