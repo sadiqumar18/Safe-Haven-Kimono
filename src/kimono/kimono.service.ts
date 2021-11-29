@@ -1,16 +1,23 @@
-import { HttpStatus, Injectable } from "@nestjs/common";
+import { HttpStatus, Inject, Injectable } from "@nestjs/common";
 import { CreateKimonoCashOutDto, RequeryKimonoDto } from "./dto/create-kimono.dto";
 import { UpdateKimonoDto } from "./dto/update-kimono.dto";
 import { HttpService } from "@nestjs/axios";
 import { lastValueFrom, map, tap } from "rxjs";
 import { xml2json } from "xml-js";
+import { InjectModel } from "@nestjs/mongoose";
+import { Model } from "mongoose";
+import { Kimono } from "./interfaces/kimono.interface";
+import { Status } from "./schemas/kimono.schema";
 
 @Injectable()
 export class KimonoService {
 
   private token;
 
-  constructor(private httpsService: HttpService) {
+  constructor(
+    private httpsService: HttpService,
+    @InjectModel('Kimono') private readonly kimonoModel: Model<Kimono>
+  ) {
     this.httpsService = httpsService;
   }
 
@@ -46,31 +53,37 @@ export class KimonoService {
 
 
   async create(createKimonoDto: CreateKimonoCashOutDto) {
+
     await this.login(createKimonoDto.terminalInformation.terminalId);
 
     let xml = this.cashOutXml(createKimonoDto)
 
+    let record;
     try {
-      let res = await lastValueFrom(this.httpsService.post(`https://qa.interswitchng.com/kmw/kimonoservice`, xml, { headers: { "Content-Type": "text/xml"
-          // 'Authorization': `Bearer ${this.token}`
-        }
+
+      let res = await lastValueFrom(this.httpsService.post(`https://qa.interswitchng.com/kmw/kimonoservice`, xml, {
+        headers: { "Content-Type": "text/xml" }
       }).pipe(
         map(response => response.data)
       ));
+
       let response = KimonoService.convertXml2Json(res);
 
-      if (response.transferResponse){
-        return {statusCode:HttpStatus.BAD_REQUEST,message:response.transferResponse.description._text};
+      if (response.transferResponse) {
+        record = await this.createRecord('74343884399434', '619b8b3f15081dda7283cf09', createKimonoDto, Status.FAILED);
+        return { statusCode: HttpStatus.BAD_REQUEST, message: response.transferResponse.description._text, data: record };
       }
 
       let responseCode = response.channelResponse.field39._text;
 
       if (responseCode != "00") {
-        return {statusCode:HttpStatus.BAD_REQUEST,message:response.channelResponse.description._text,data:{}};
+        record = await this.createRecord('74343884399434', '619b8b3f15081dda7283cf09', createKimonoDto, Status.SUCCESS);
+        return { statusCode: HttpStatus.BAD_REQUEST, message: response.channelResponse.description._text, data: record };
       }
 
-      return {statusCode:HttpStatus.OK,message:response.channelResponse.description._text};
-    }catch (e) {
+      record = await this.createRecord('74343884399434', '619b8b3f15081dda7283cf09', createKimonoDto, Status.SUCCESS);
+      return { statusCode: HttpStatus.OK, message: response.channelResponse.description._text, data: record };
+    } catch (e) {
       return {
         statusCode: HttpStatus.BAD_REQUEST,
         message: "Transaction failed"
@@ -80,37 +93,42 @@ export class KimonoService {
   }
 
 
+  private async createRecord(clientId: string, terminalId: string, createKimonoDto: CreateKimonoCashOutDto, status: string) {
+    return await this.kimonoModel.create({
+      clientId: clientId,
+      terminal: terminalId,
+      amount: createKimonoDto.minorAmount,
+      stan: createKimonoDto.stan,
+      retrievalReferenceNumber: createKimonoDto.retrievalReferenceNumber,
+      status: status
+    });
+  }
+
   private static convertXml2Json(res) {
     return JSON.parse(xml2json(res, { compact: true, spaces: 4 }));
   }
 
   async requery(requeryKimonoDto: RequeryKimonoDto) {
+
     let xml = this.requeryXml(requeryKimonoDto);
 
-    let requeryRes;
     try {
-      requeryRes = await lastValueFrom(this.httpsService.post(`https://qa.interswitchng.com/kmw/v2/transaction/requery`, xml, {
-        headers: {
-          "Content-Type": "text/xml"
-          // 'Authorization': `Bearer ${this.token}`
-        }
-      }).pipe(
-        map(response => response.data)
-      ));
+    let requeryRes = await lastValueFrom(this.httpsService.post(`https://qa.interswitchng.com/kmw/v2/transaction/requery`, xml, {
+      headers: {
+        "Content-Type": "text/xml"
+        // 'Authorization': `Bearer ${this.token}`
+      }
+    }).pipe(
+      map(response => response.data)
+    ));
 
-      let response = KimonoService.convertXml2Json(requeryRes);
 
-      if (response.transferResponse) {
-        return { statusCode: HttpStatus.BAD_REQUEST, message: response.transferResponse.description._text };
+      if (requeryRes.field39 != "00") {
+        return { statusCode: HttpStatus.BAD_REQUEST, message: requeryRes.description, data:{}};
       }
 
-      let responseCode = response.channelResponse.field39._text;
 
-      if (responseCode != "00") {
-        return { statusCode: HttpStatus.BAD_REQUEST, message: response.channelResponse.description._text, data: {} };
-      }
-
-      return { statusCode: HttpStatus.OK, message: response.channelResponse.description._text };
+      return { statusCode: HttpStatus.OK, message: requeryRes.description,data:{}};
 
     } catch (e) {
       return {
@@ -121,9 +139,11 @@ export class KimonoService {
   }
 
 
+
+
   private requeryXml(requeryKimonoDto: RequeryKimonoDto) {
     return `<transactionRequeryRequest>
-            <applicationType>${requeryKimonoDto.applicationType}</applicationType>
+            <applicationType>${'gTransfer'}</applicationType>
             <originalTransStan>${requeryKimonoDto.originalTransactionTran}</originalTransStan>
             <originalMinorAmount>${requeryKimonoDto.originalMinorAmount}</originalMinorAmount>
             <terminalInformation>
@@ -182,38 +202,40 @@ export class KimonoService {
         </cardData>
         <originalTransmissionDateTime>${createKimonoDto.originalTransmissionDateTime}</originalTransmissionDateTime>
         <stan>${createKimonoDto.stan}</stan>
-        <fromAccount>${createKimonoDto.fromAccount}</fromAccount>
-        <toAccount>${createKimonoDto.toAccount ?? ''}</toAccount>
+        <fromAccount>${'Savings'}</fromAccount>
+        <toAccount></toAccount>
         <minorAmount>${createKimonoDto.minorAmount}</minorAmount>
-        <receivingInstitutionId>${createKimonoDto.receivingInstitutionId}</receivingInstitutionId>
-        <surcharge>${createKimonoDto.surcharge}</surcharge>
+        <receivingInstitutionId>${'627821'}</receivingInstitutionId>
+        <surcharge>${'1075'}</surcharge>
         <pinData>
             <ksnd>${createKimonoDto.pinData.ksnd}</ksnd>
-            <ksn>${createKimonoDto.pinData.ksn ?? ''}</ksn>
-            <pinType>${createKimonoDto.pinData.pinType}</pinType>
-            <pinBlock>${createKimonoDto.pinData.pinBlock ?? ''}</pinBlock>
+            <ksn>${createKimonoDto.pinData.ksn || ''}</ksn>
+            <pinType>${'Dukpt'}</pinType>
+            <pinBlock>${createKimonoDto.pinData.pinBlock || ''}</pinBlock>
         </pinData>
-        <keyLabel>${createKimonoDto.keyLabel}</keyLabel>
-        <destinationAccountNumber>${createKimonoDto.destinationAccountNumber}</destinationAccountNumber>
-        <extendedTransactionType>${createKimonoDto.extendedTransactionType}</extendedTransactionType>
+        <keyLabel>${'000006'}</keyLabel>
+        <destinationAccountNumber>${'2000000001'}</destinationAccountNumber>
+        <extendedTransactionType>${'6103'}</extendedTransactionType>
         <retrievalReferenceNumber>${createKimonoDto.retrievalReferenceNumber}</retrievalReferenceNumber>
         </transferRequest>`
   }
 
-  findAll() {
-    return `This action returns all kimono`;
+  async findAll() {
+    return this.kimonoModel.find({}).populate('terminal').sort({ createdAt: -1 }).exec();
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} kimono`;
+  findOne(id: number, clientId: string) {
+    return this.kimonoModel.findOne({ id, clientId }).populate('terminal').exec();
   }
 
   update(id: number, updateKimonoDto: UpdateKimonoDto) {
-    return `This action updates a #${id} kimono`;
+    let update  = {updateKimonoDto}
+    return this.kimonoModel.findOneAndUpdate({ id }, update, { new: true }).populate('terminal').exec();
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} kimono`;
+
+  remove(id: number, clientID: string) {
+    return this.kimonoModel.findOneAndRemove({ id, clientID }).exec();
   }
 
 

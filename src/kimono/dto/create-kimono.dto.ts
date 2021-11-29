@@ -1,6 +1,6 @@
-import { IsNotEmpty, ValidateNested } from "class-validator";
-import { validateEach } from "@nestjs/common/utils/validate-each.util";
+import { IsNotEmpty, Validate, ValidateNested } from "class-validator";
 import { Type } from "class-transformer";
+import { TerminalExists } from "../../terminal/decorators/terminal.decorator";
 
 
 export class TerminalInformationDto {
@@ -33,6 +33,7 @@ export class TerminalInformationDto {
   readonly printerStatus: string;
 
   @IsNotEmpty()
+ // @Validate(TerminalExists)
   readonly terminalId: string;
 
   @IsNotEmpty()
@@ -127,17 +128,18 @@ export class CardDataDto {
 
 export class PinDataDto {
 
-  @IsNotEmpty()
+  //@IsNotEmpty()
   readonly pinBlock: string;
 
-  @IsNotEmpty()
+  //@IsNotEmpty()
   readonly ksn: string;
 
   @IsNotEmpty()
   readonly ksnd: string;
 
-  @IsNotEmpty()
-  readonly pinType: string;
+  //to be removed
+  // @IsNotEmpty()
+  // readonly pinType: string;
 
 }
 
@@ -179,28 +181,36 @@ export class CreateKimonoCashOutDto {
   @IsNotEmpty()
   readonly stan: string;
 
-  @IsNotEmpty()
-  readonly fromAccount: string;
+  //to be removed
+  // @IsNotEmpty()
+   //readonly fromAccount: string;
 
-  readonly toAccount: string = '';
+  //to be removed
+  //readonly toAccount: string = '';
 
   @IsNotEmpty()
+  //@Min(1)
   readonly minorAmount: string;
 
-  @IsNotEmpty()
-  readonly receivingInstitutionId: string;
+  // //to be removed
+  // @IsNotEmpty()
+  // readonly receivingInstitutionId: string;
 
-  @IsNotEmpty()
-  readonly surcharge: string;
+  // //to be removed
+  // @IsNotEmpty()
+  // readonly surcharge: string;
 
-  @IsNotEmpty()
-  readonly keyLabel: string = '';
+  // //to be removed
+  // @IsNotEmpty()
+  // readonly keyLabel: string = '';
 
-  @IsNotEmpty()
-  readonly destinationAccountNumber: string;
+  //to be removed
+  // @IsNotEmpty()
+  // readonly destinationAccountNumber: string;
 
-  @IsNotEmpty()
-  readonly extendedTransactionType: string;
+  // //to be removed
+  // @IsNotEmpty()
+  // readonly extendedTransactionType: string;
 
   @IsNotEmpty()
   readonly retrievalReferenceNumber: string;
@@ -212,8 +222,8 @@ export class CreateKimonoCashOutDto {
 
 export class RequeryKimonoDto{
 
-  @IsNotEmpty()
-  applicationType: string;
+  // @IsNotEmpty()
+  // applicationType: string;
 
   @IsNotEmpty()
   originalTransactionTran: string;
