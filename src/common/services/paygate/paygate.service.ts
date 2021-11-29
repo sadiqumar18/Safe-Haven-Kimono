@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { HttpService } from "@nestjs/axios";
 import { lastValueFrom, map, tap } from "rxjs";
-import { AppConfig } from "../../../../app.config";
+import { AppConfig } from "../../../app.config";
 
 @Injectable()
 export class PaygateService {
