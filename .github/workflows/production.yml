@@ -34,7 +34,7 @@ jobs:
           image: gcr.io/${{ secrets.PRODUCTION_PROJECT_ID }}/safe-haven-kimono:${{  github.sha }}
           credentials: ${{ secrets.PRODUCTION_GCP_SA_KEY }}
           region: europe-west2
-          secrets: /app/src/environments/.env=safe-haven-kimono-secret:latest
+          secrets: /app/environments/.env=safe-haven-kimono-secret:latest
 
       - name: Use Output
         run: curl "${{ steps.deploy.outputs.url }}"
