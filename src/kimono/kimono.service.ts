@@ -22,9 +22,6 @@ export class KimonoService {
   }
 
   async login(terminalId: string) {
-
-    console.log(process.env.MERCHANT_ID);
-
     let data = `<tokenPassportRequest>
                     <terminalInformation>
                     <merchantId>${process.env.MERCHANT_ID}</merchantId>
@@ -70,8 +67,8 @@ export class KimonoService {
       let response = KimonoService.convertXml2Json(res);
 
       if (response.transferResponse) {
-       // record = await this.createRecord('74343884399434', '619b8b3f15081dda7283cf09', createKimonoDto, Status.FAILED);
-        return { statusCode: HttpStatus.BAD_REQUEST, message: response.transferResponse.description._text, data: {} };
+        record = await this.createRecord('74343884399434', '619b8b3f15081dda7283cf09', createKimonoDto, Status.FAILED);
+        return { statusCode: HttpStatus.BAD_REQUEST, message: response.transferResponse.description._text, data: record };
       }
 
       let responseCode = response.channelResponse.field39._text;
@@ -85,7 +82,6 @@ export class KimonoService {
       record = await this.createRecord('74343884399434', '619b8b3f15081dda7283cf09', createKimonoDto, Status.SUCCESS);
       return { statusCode: HttpStatus.OK, message: response.channelResponse.description._text, data: record };
     } catch (e) {
-      console.log(e);
       return {
         statusCode: HttpStatus.BAD_REQUEST,
         message: "Transaction failed"
