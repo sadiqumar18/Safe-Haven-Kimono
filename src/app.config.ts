@@ -19,6 +19,6 @@ export const AppConfigValidationSchema = Joi.object({
   DATABASE_URI: Joi.string().required(),
   SAFEHAVEN_IBS_BASE_URL: Joi.string().required(),
   MERCHANT_ID: Joi.string().required(),
-  RSA_PRIVATE_KEY: Joi.string().required(),
-  RSA_PUBLIC_KEY: Joi.string().required(),
+  // RSA_PRIVATE_KEY: Joi.string().required(),
+  // RSA_PUBLIC_KEY: Joi.string().required(),
 })
