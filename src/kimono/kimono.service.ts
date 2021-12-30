@@ -1,4 +1,4 @@
-import { HttpStatus, Inject, Injectable } from "@nestjs/common";
+import { HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
 import { CreateKimonoCashOutDto, RequeryKimonoDto } from "./dto/create-kimono.dto";
 import { UpdateKimonoDto } from "./dto/update-kimono.dto";
 import { HttpService } from "@nestjs/axios";
@@ -8,6 +8,9 @@ import { InjectModel } from "@nestjs/mongoose";
 import { Model } from "mongoose";
 import { Kimono } from "./interfaces/kimono.interface";
 import { Status } from "./schemas/kimono.schema";
+import { AppConfig } from '../app.config';
+import { IsNotEmpty } from 'class-validator';
+import { TerminalInterface } from '../terminal/interfaces/terminal.interface';
 
 @Injectable()
 export class KimonoService {
@@ -16,7 +19,8 @@ export class KimonoService {
 
   constructor(
     private httpsService: HttpService,
-    @InjectModel('Kimono') private readonly kimonoModel: Model<Kimono>
+    @InjectModel('Kimono') private readonly kimonoModel: Model<Kimono>,
+    @InjectModel('Terminal') private readonly terminalModel: Model<TerminalInterface>
   ) {
     this.httpsService = httpsService;
   }
@@ -24,7 +28,7 @@ export class KimonoService {
   async login(terminalId: string) {
     let data = `<tokenPassportRequest>
                     <terminalInformation>
-                    <merchantId>${process.env.MERCHANT_ID}</merchantId>
+                    <merchantId>${AppConfig.MERCHANT_ID}</merchantId>
                     <terminalId>${terminalId}</terminalId>
                     </terminalInformation>
                     </tokenPassportRequest>`;
@@ -34,7 +38,7 @@ export class KimonoService {
     };
 
     try {
-      return  await lastValueFrom(this.httpsService.post("https://qa.interswitchng.com/kmw/requesttoken/perform-process", data, config).pipe(
+      return  await lastValueFrom(this.httpsService.post('https://saturn.interswitchng.com/kimonotms/requesttoken/perform-process', data, config).pipe(
         map(response => response.data),
         tap(data => {
           this.token = data.token;
@@ -54,29 +58,49 @@ export class KimonoService {
     await this.login(createKimonoDto.terminalInformation.terminalId);
 
     let xml = this.cashOutXml(createKimonoDto)
-
     let record;
-    try {
 
+    try {
       let res = await lastValueFrom(this.httpsService.post(`https://qa.interswitchng.com/kmw/kimonoservice`, xml, {
-        headers: { "Content-Type": "text/xml" }
+        //headers: { 'Content-Type': 'text/xml' , 'Authorization': `Bearer ${this.token}`}
       }).pipe(
-        map(response => response.data)
+        map(response => response.data),
       ));
+
+      if(res.field39){
+        record = await this.createRecord('74343884399434', '619b8b3f15081dda7283cf09', createKimonoDto, Status.FAILED);
+        return {
+          statusCode: HttpStatus.BAD_REQUEST,
+          message: res.description,
+          data: record,
+        };
+      }
 
       let response = KimonoService.convertXml2Json(res);
 
+      let terminal = await this.terminalModel.findOne({ terminalId: createKimonoDto.terminalInformation.terminalId });
+
       if (response.transferResponse) {
         record = await this.createRecord('74343884399434', '619b8b3f15081dda7283cf09', createKimonoDto, Status.FAILED);
-        return { statusCode: HttpStatus.BAD_REQUEST, message: response.transferResponse.description._text, data: record };
+        Logger.log(record);
+        return {
+          statusCode: HttpStatus.BAD_REQUEST,
+          message: response.transferResponse.description._text,
+          data: record,
+        };
       }
 
       let responseCode = response.channelResponse.field39._text;
 
-      if (responseCode != "00") {
-        record = await this.createRecord('74343884399434', '619b8b3f15081dda7283cf09', createKimonoDto, Status.SUCCESS);
+
+      if (responseCode != '00') {
+        record = await this.createRecord('74343884399434', '619b8b3f15081dda7283cf09', createKimonoDto, Status.FAILED);
         //
-        return { statusCode: HttpStatus.BAD_REQUEST, message: response.channelResponse.description._text, data: record };
+        return {
+          statusCode: HttpStatus.BAD_REQUEST,
+          message: response.channelResponse.description._text,
+          data: record,
+        };
       }
 
       record = await this.createRecord('74343884399434', '619b8b3f15081dda7283cf09', createKimonoDto, Status.SUCCESS);
@@ -84,8 +108,8 @@ export class KimonoService {
     } catch (e) {
       return {
         statusCode: HttpStatus.BAD_REQUEST,
-        message: "Transaction failed"
-      }
+        message: 'Transaction failed',
+      };
     }
 
   }
@@ -129,16 +153,15 @@ export class KimonoService {
       return { statusCode: HttpStatus.OK, message: requeryRes.description,data:{}};
 
     } catch (e) {
+      //requery failed transaction here
+      return { statusCode: HttpStatus.BAD_REQUEST, message: 'Transaction failed', data:{}};
 
-      //TODO requery transaction
       return {
         statusCode: HttpStatus.BAD_REQUEST,
         message: "Transaction failed"
       };
     }
   }
-
-
 
 
   private requeryXml(requeryKimonoDto: RequeryKimonoDto) {
@@ -148,7 +171,7 @@ export class KimonoService {
             <originalMinorAmount>${requeryKimonoDto.originalMinorAmount}</originalMinorAmount>
             <terminalInformation>
             <terminalId>${requeryKimonoDto.terminalId}</terminalId>
-            <merchantId>${process.env.MERCHANT_ID}</merchantId>
+            <merchantId>${AppConfig.MERCHANT_ID}</merchantId>
             <transmissionDate>${requeryKimonoDto.transmissionDate}</transmissionDate>
             </terminalInformation>
             </transactionRequeryRequest>`
@@ -160,7 +183,7 @@ export class KimonoService {
             <batteryInformation>${createKimonoDto.terminalInformation.batteryInfomation}</batteryInformation>
             <currencyCode>${createKimonoDto.terminalInformation.currencyCode}</currencyCode>
             <languageInfo>${createKimonoDto.terminalInformation.languageInfo}</languageInfo>
-            <merchantId>${process.env.MERCHANT_ID}</merchantId>
+            <merchantId>${AppConfig.MERCHANT_ID}</merchantId>
             <merhcantLocation>${createKimonoDto.terminalInformation.merchantLocation}</merhcantLocation>
             <posConditionCode>${createKimonoDto.terminalInformation.posConditionCode}</posConditionCode>
             <posDataCode>${createKimonoDto.terminalInformation.posDataCode}</posDataCode>
@@ -205,7 +228,7 @@ export class KimonoService {
         <fromAccount>${'Savings'}</fromAccount>
         <toAccount></toAccount>
         <minorAmount>${createKimonoDto.minorAmount}</minorAmount>
-        <receivingInstitutionId>${'627821'}</receivingInstitutionId>
+        <receivingInstitutionId>${'639138'}</receivingInstitutionId>
         <surcharge>${'1075'}</surcharge>
         <pinData>
             <ksnd>${createKimonoDto.pinData.ksnd}</ksnd>

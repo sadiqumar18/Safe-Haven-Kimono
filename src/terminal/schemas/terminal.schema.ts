@@ -8,7 +8,7 @@ export const terminalSchema = new mongoose.Schema({
   terminalId: String,
   isActive: {
     type: Boolean,
-    default: false
+    default: true
   },
   isDeleted: {type: Boolean, default: false},
   createdAt: {

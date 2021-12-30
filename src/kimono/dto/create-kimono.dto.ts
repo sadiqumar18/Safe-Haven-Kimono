@@ -33,7 +33,7 @@ export class TerminalInformationDto {
   readonly printerStatus: string;
 
   @IsNotEmpty()
- // @Validate(TerminalExists)
+  @Validate(TerminalExists)
   readonly terminalId: string;
 
   @IsNotEmpty()
