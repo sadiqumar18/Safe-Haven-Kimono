@@ -9,7 +9,6 @@ export class EncryptionService {
 
   public publicKey: string;
   public privateKey: string;
-
   public aesKey: string;
 
   constructor() {
@@ -17,21 +16,25 @@ export class EncryptionService {
 
 
   public async decryptAesPayload(cipherText: string, aesKey: string): Promise<string> {
-    const bytes = await CryptoJS.AES.decrypt(cipherText, aesKey);
-    return  JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
+    return JSON.parse(CryptoJS.AES.decrypt(cipherText, aesKey,{
+      mode: CryptoJS.mode.ECB,
+    }).toString(CryptoJS.enc.Utf8))
   }
 
 
   public async encryptAesPayload(payload: string, aesKey: string): Promise<string> {
-    return CryptoJS.AES.encrypt(JSON.stringify(payload), aesKey);
+    return CryptoJS.AES.encrypt(JSON.stringify(payload), aesKey,{
+      mode: CryptoJS.mode.ECB,
+    }).toString();
   }
 
 
-  public rsaEncrypt(text: string, publicKey: string): string {
+  public async rsaEncrypt(text: string, publicKey: string): Promise<string> {
     const buffer = Buffer.from(JSON.stringify(text));
     const encrypted = publicEncrypt({
-      key: publicKey
-      // oaepHash: "sha256",
+      key: publicKey,
+      padding: constants.RSA_PKCS1_OAEP_PADDING,
+      oaepHash: "sha1",
     }, buffer);
     return encrypted.toString("base64");
   }
@@ -41,32 +44,30 @@ export class EncryptionService {
     const buffer = Buffer.from(text, "base64");
     const decrypted = privateDecrypt({
       key: privateKey,
-      padding: constants.RSA_PKCS1_PADDING
-      // oaepHash: "sha256",
+      oaepHash: "sha1",
     }, buffer);
     return decrypted.toString();
   }
 
 
-  public async generateKeyPairSync(bits: number): Promise<any> {
-    let { publicKey, privateKey } =
-      generateKeyPairSync("rsa", {
-        modulusLength: bits,
-        publicKeyEncoding: {
-          type: "spki",
-          format: "pem"
-        },
-        privateKeyEncoding: {
-          type: "pkcs8",
-          format: "pem"
-        }
-      });
-    this.publicKey = publicKey;
-    this.privateKey = privateKey;
-
-    console.log("publicKey: ", publicKey);
-    console.log("privateKey: ", privateKey);
+  public async generateRsaKeys(): Promise<void> {
+    const { publicKey, privateKey } = generateKeyPairSync("rsa", {
+      modulusLength: 2048,
+      publicKeyEncoding: {
+        type: 'spki',
+        format: 'pem'
+      },
+      privateKeyEncoding: {
+        type: 'pkcs8',
+        format: 'pem'
+      }
+    });
+    console.log(publicKey);
+    console.log(privateKey);
   }
+
+
+
 
 
 }

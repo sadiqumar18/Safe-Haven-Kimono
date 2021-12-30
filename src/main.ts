@@ -4,6 +4,7 @@ import { ValidationPipe } from "@nestjs/common";
 import { useContainer } from "class-validator";
 import { TerminalModule } from "./terminal/terminal.module";
 import { AppConfig } from './app.config';
+import { LogLevel } from 'ts-loader/dist/logger';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);

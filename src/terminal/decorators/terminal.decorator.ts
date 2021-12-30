@@ -19,8 +19,7 @@ export class TerminalExists implements ValidatorConstraintInterface {
     async validate(terminalId: string, args: ValidationArguments) {
 
         try {
-            console.log(await this.terminalModel.findById(terminalId));
-            return  !!await this.terminalModel.findById(terminalId);
+            return  await this.terminalModel.exists({terminalId})
         }catch (error) {
             return false
         }
@@ -30,17 +29,4 @@ export class TerminalExists implements ValidatorConstraintInterface {
     defaultMessage(args: ValidationArguments) {
         return `terminalId with id ${args.value} does not exist`;
     }
-}
-
-
-export function TerminalExistsCheck(validationOptions?: ValidationOptions) {
-    return function (object: any, propertyName: string) {
-        registerDecorator({
-            name: 'TerminalExistsCheck',
-            target: object.constructor,
-            propertyName: propertyName,
-            options: validationOptions,
-            validator: TerminalExists,
-        });
-    };
 }

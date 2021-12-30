@@ -4,7 +4,7 @@ import { AppService } from './app.service';
 import { KimonoModule } from './kimono/kimono.module';
 import { HttpModule } from "@nestjs/axios";
 import { PaygateService } from "./common/services/paygate/paygate.service";
-import { EncryptionService } from "./common/encryption/encryption.service";
+import { EncryptionService } from "./kimono/encryption.service";
 import { TerminalModule } from './terminal/terminal.module';
 import { ConfigModule } from "@nestjs/config";
 import { AppConfig, AppConfigValidationSchema } from "./app.config";
@@ -12,7 +12,7 @@ import { MongooseModule } from "@nestjs/mongoose";
 import { kimonoSchema } from "./kimono/schemas/kimono.schema";
 import { EventModule } from './event/event.module';
 import { TerminalExists } from "./terminal/decorators/terminal.decorator";
-import { EncryptionMiddleware } from "./common/middlewares/encryption.middleware";
+import { EncryptionMiddleware } from "./kimono/middlewares/encryption.middleware";
 
 
 @Module({
