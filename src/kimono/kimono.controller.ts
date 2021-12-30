@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Res } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpStatus, Param, Patch, Post, Res } from '@nestjs/common';
 import { KimonoService } from './kimono.service';
 import { CreateKimonoCashOutDto, RequeryKimonoDto } from './dto/create-kimono.dto';
 import { UpdateKimonoDto } from './dto/update-kimono.dto';
@@ -32,7 +32,7 @@ export class KimonoController {
     try {
       return JSON.parse(this.encryptionService.rsaDecrypt(data.securePayload, rsaPrivateKey));
     }catch (e) {
-      return e.message;
+      return {statusCode: HttpStatus.BAD_REQUEST, message: e.message};
     }
   }
 
