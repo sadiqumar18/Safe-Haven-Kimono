@@ -1,4 +1,4 @@
-import { IsNotEmpty, Validate, ValidateNested } from "class-validator";
+import { IsIn, IsNotEmpty, Validate, ValidateNested } from 'class-validator';
 import { Type } from "class-transformer";
 import { TerminalExists } from "../../terminal/decorators/terminal.decorator";
 
@@ -217,6 +217,10 @@ export class CreateKimonoCashOutDto {
 
   @IsNotEmpty()
   readonly transactionCurrencyCode: any;
+
+  @IsIn(['savings','current','credit'])
+  @IsNotEmpty()
+  readonly accountType: string = 'default';
 
 }
 

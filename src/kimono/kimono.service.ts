@@ -37,8 +37,10 @@ export class KimonoService {
       headers: { 'Content-Type': 'text/xml' }
     };
 
+    const KIMONO_TOKEN_URL = (AppConfig.NODE_ENV === 'production') ? AppConfig.KIMONO_TOKEN_URL: AppConfig.KIMONO_TOKEN_URL_TEST
+
     try {
-      return  await lastValueFrom(this.httpsService.post('https://saturn.interswitchng.com/kimonotms/requesttoken/perform-process', data, config).pipe(
+      return  await lastValueFrom(this.httpsService.post(KIMONO_TOKEN_URL, data, config).pipe(
         map(response => response.data),
         tap(data => {
           this.token = data.token;
@@ -58,11 +60,14 @@ export class KimonoService {
     await this.login(createKimonoDto.terminalInformation.terminalId);
 
     let xml = this.cashOutXml(createKimonoDto)
+
     let record;
 
+    const KIMONO_CASHOUT_URL = (AppConfig.NODE_ENV === 'production') ? AppConfig.KIMONO_CASHOUT_URL: AppConfig.KIMONO_CASHOUT_URL_TEST
+
     try {
-      let res = await lastValueFrom(this.httpsService.post(`https://qa.interswitchng.com/kmw/kimonoservice`, xml, {
-        //headers: { 'Content-Type': 'text/xml' , 'Authorization': `Bearer ${this.token}`}
+      let res = await lastValueFrom(this.httpsService.post(KIMONO_CASHOUT_URL, xml, {
+        headers: { 'Content-Type': 'text/xml'}
       }).pipe(
         map(response => response.data),
       ));
@@ -82,7 +87,6 @@ export class KimonoService {
 
       if (response.transferResponse) {
         record = await this.createRecord('74343884399434', '619b8b3f15081dda7283cf09', createKimonoDto, Status.FAILED);
-        Logger.log(record);
         return {
           statusCode: HttpStatus.BAD_REQUEST,
           message: response.transferResponse.description._text,
@@ -92,10 +96,8 @@ export class KimonoService {
 
       let responseCode = response.channelResponse.field39._text;
 
-
       if (responseCode != '00') {
         record = await this.createRecord('74343884399434', '619b8b3f15081dda7283cf09', createKimonoDto, Status.FAILED);
-        //
         return {
           statusCode: HttpStatus.BAD_REQUEST,
           message: response.channelResponse.description._text,
@@ -144,7 +146,6 @@ export class KimonoService {
       map(response => response.data)
     ));
 
-
       if (requeryRes.field39 != "00") {
         return { statusCode: HttpStatus.BAD_REQUEST, message: requeryRes.description, data:{}};
       }
@@ -155,11 +156,7 @@ export class KimonoService {
     } catch (e) {
       //requery failed transaction here
       return { statusCode: HttpStatus.BAD_REQUEST, message: 'Transaction failed', data:{}};
-
-      return {
-        statusCode: HttpStatus.BAD_REQUEST,
-        message: "Transaction failed"
-      };
+      
     }
   }
 
@@ -178,6 +175,9 @@ export class KimonoService {
   }
 
   cashOutXml(createKimonoDto: CreateKimonoCashOutDto){
+
+
+
     return `<transferRequest>
              <terminalInformation>
             <batteryInformation>${createKimonoDto.terminalInformation.batteryInfomation}</batteryInformation>
@@ -225,7 +225,7 @@ export class KimonoService {
         </cardData>
         <originalTransmissionDateTime>${createKimonoDto.originalTransmissionDateTime}</originalTransmissionDateTime>
         <stan>${createKimonoDto.stan}</stan>
-        <fromAccount>${'Savings'}</fromAccount>
+        <fromAccount>${createKimonoDto.accountType}</fromAccount>
         <toAccount></toAccount>
         <minorAmount>${createKimonoDto.minorAmount}</minorAmount>
         <receivingInstitutionId>${'639138'}</receivingInstitutionId>
@@ -241,6 +241,12 @@ export class KimonoService {
         <extendedTransactionType>${'6103'}</extendedTransactionType>
         <retrievalReferenceNumber>${createKimonoDto.retrievalReferenceNumber}</retrievalReferenceNumber>
         </transferRequest>`
+  }
+
+
+  //Todo credit user account
+  async payGateCredit(){
+
   }
 
   async findAll() {

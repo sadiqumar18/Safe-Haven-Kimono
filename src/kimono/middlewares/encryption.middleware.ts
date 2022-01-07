@@ -1,4 +1,4 @@
-import { HttpCode, HttpStatus, Injectable, NestMiddleware } from '@nestjs/common';
+import { BadRequestException, HttpCode, HttpStatus, Injectable, NestMiddleware } from '@nestjs/common';
 import { EncryptionService } from '../encryption.service';
 import fs from 'fs';
 import { AppConfig } from '../../app.config';
@@ -11,21 +11,23 @@ export class EncryptionMiddleware implements NestMiddleware {
 
    async use(req: any, res: any, next: () => void) {
 
-    if (req.body.securePayload === undefined || req.body.securePayload === null) {
-      res.status(HttpStatus.BAD_REQUEST).send({
+    try {
+      if (req.body.securePayload === undefined || req.body.securePayload === null) throw new BadRequestException('Missing securePayload')
+    }catch (e){
+      return res.send({
         statusCode: HttpStatus.BAD_REQUEST,
         error: 'Bad Request',
-        message: 'Missing securePayload',
+        message: e.message,
       });
-     }
+    }
 
-     try {
+    try {
        const decrypted =  JSON.parse(this.encryptionService.rsaDecrypt(req.body.securePayload, AppConfig.RSA_PRIVATE_KEY));
        req.body.track2 = decrypted.track2;
        req.body.pinData = decrypted.pinData
        next();
      } catch (e) {
-       res.status(HttpStatus.BAD_REQUEST).send({
+      return res.status(HttpStatus.BAD_REQUEST).send({
          statusCode: HttpStatus.BAD_REQUEST,
          message: 'Invalid request',
          error: e.reason
