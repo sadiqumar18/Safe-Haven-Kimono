@@ -26,9 +26,12 @@ export class KimonoService {
   }
 
   async login(terminalId: string) {
+
+    const MERCHANT_ID = (AppConfig.NODE_ENV === 'production') ? AppConfig.MERCHANT_ID: AppConfig.MERCHANT_ID
+
     let data = `<tokenPassportRequest>
                     <terminalInformation>
-                    <merchantId>${AppConfig.MERCHANT_ID}</merchantId>
+                    <merchantId>${MERCHANT_ID}</merchantId>
                     <terminalId>${terminalId}</terminalId>
                     </terminalInformation>
                     </tokenPassportRequest>`;
@@ -61,13 +64,16 @@ export class KimonoService {
 
     let xml = this.cashOutXml(createKimonoDto)
 
+    console.log(xml);
+
     let record;
 
     const KIMONO_CASHOUT_URL = (AppConfig.NODE_ENV === 'production') ? AppConfig.KIMONO_CASHOUT_URL: AppConfig.KIMONO_CASHOUT_URL_TEST
+    const HEADER = (AppConfig.NODE_ENV === 'production') ?   { 'Content-Type': 'text/xml','Authorization': `Bearer ${this.token}`} : { 'Content-Type': 'text/xml'}
 
     try {
       let res = await lastValueFrom(this.httpsService.post(KIMONO_CASHOUT_URL, xml, {
-        headers: { 'Content-Type': 'text/xml'}
+        headers: HEADER
       }).pipe(
         map(response => response.data),
       ));
@@ -156,7 +162,7 @@ export class KimonoService {
     } catch (e) {
       //requery failed transaction here
       return { statusCode: HttpStatus.BAD_REQUEST, message: 'Transaction failed', data:{}};
-      
+
     }
   }
 
@@ -176,6 +182,12 @@ export class KimonoService {
 
   cashOutXml(createKimonoDto: CreateKimonoCashOutDto){
 
+    const MERCHANT_ID = (AppConfig.NODE_ENV === 'production') ? AppConfig.MERCHANT_ID: AppConfig.MERCHANT_ID
+    const EXTENDTED_TRANSACTION_TYPE = (AppConfig.NODE_ENV === 'production') ? AppConfig.EXTENDED_TRANSACTION_TYPE: AppConfig.EXTENDED_TRANSACTION_TYPE_TEST
+    const SURCHARGE_AMOUNT = (AppConfig.NODE_ENV === 'production') ? AppConfig.SURCHARGE_AMOUNT: AppConfig.SURCHARGE_AMOUNT_TEST
+    const DESTINATION_ACCOUNT_NUMBER = (AppConfig.NODE_ENV === 'production') ? AppConfig.DESTINATION_ACCOUNT_NUMBER: AppConfig.DESTINATION_ACCOUNT_NUMBER_TEST
+    const KEYLABEL = (AppConfig.NODE_ENV === 'production') ? AppConfig.KEYLABEL: AppConfig.KEYLABEL_TEST
+    const RECEIVING_INSTITUTION_ID = (AppConfig.NODE_ENV === 'production') ? AppConfig.RECEIVING_INSTITUTION_ID: AppConfig.RECEIVING_INSTITUTION_ID_TEST
 
 
     return `<transferRequest>
@@ -183,7 +195,7 @@ export class KimonoService {
             <batteryInformation>${createKimonoDto.terminalInformation.batteryInfomation}</batteryInformation>
             <currencyCode>${createKimonoDto.terminalInformation.currencyCode}</currencyCode>
             <languageInfo>${createKimonoDto.terminalInformation.languageInfo}</languageInfo>
-            <merchantId>${AppConfig.MERCHANT_ID}</merchantId>
+            <merchantId>${MERCHANT_ID}</merchantId>
             <merhcantLocation>${createKimonoDto.terminalInformation.merchantLocation}</merhcantLocation>
             <posConditionCode>${createKimonoDto.terminalInformation.posConditionCode}</posConditionCode>
             <posDataCode>${createKimonoDto.terminalInformation.posDataCode}</posDataCode>
@@ -228,17 +240,17 @@ export class KimonoService {
         <fromAccount>${createKimonoDto.accountType}</fromAccount>
         <toAccount></toAccount>
         <minorAmount>${createKimonoDto.minorAmount}</minorAmount>
-        <receivingInstitutionId>${'639138'}</receivingInstitutionId>
-        <surcharge>${'1075'}</surcharge>
+        <receivingInstitutionId>${RECEIVING_INSTITUTION_ID}</receivingInstitutionId>
+        <surcharge>${SURCHARGE_AMOUNT}</surcharge>
         <pinData>
             <ksnd>${createKimonoDto.pinData.ksnd}</ksnd>
             <ksn>${createKimonoDto.pinData.ksn || ''}</ksn>
             <pinType>${'Dukpt'}</pinType>
             <pinBlock>${createKimonoDto.pinData.pinBlock || ''}</pinBlock>
         </pinData>
-        <keyLabel>${'000006'}</keyLabel>
-        <destinationAccountNumber>${'2000000001'}</destinationAccountNumber>
-        <extendedTransactionType>${'6103'}</extendedTransactionType>
+        <keyLabel>${KEYLABEL}</keyLabel>
+        <destinationAccountNumber>${DESTINATION_ACCOUNT_NUMBER}</destinationAccountNumber>
+        <extendedTransactionType>${EXTENDTED_TRANSACTION_TYPE}</extendedTransactionType>
         <retrievalReferenceNumber>${createKimonoDto.retrievalReferenceNumber}</retrievalReferenceNumber>
         </transferRequest>`
   }

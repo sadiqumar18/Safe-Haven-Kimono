@@ -1,7 +1,7 @@
-import { BadRequestException, HttpCode, HttpStatus, Injectable, NestMiddleware } from '@nestjs/common';
+import { BadRequestException, HttpStatus, Injectable, NestMiddleware } from '@nestjs/common';
 import { EncryptionService } from '../encryption.service';
-import fs from 'fs';
 import { AppConfig } from '../../app.config';
+import { log } from 'util';
 
 @Injectable()
 export class EncryptionMiddleware implements NestMiddleware {
@@ -12,7 +12,7 @@ export class EncryptionMiddleware implements NestMiddleware {
    async use(req: any, res: any, next: () => void) {
 
     try {
-      if (req.body.securePayload === undefined || req.body.securePayload === null) throw new BadRequestException('Missing securePayload')
+      if (req.headers.track2 === undefined || req.headers.track2 === null || req.headers.pindata === undefined || req.headers.pindata === null  ) throw new BadRequestException('Missing track2 or pinData missing')
     }catch (e){
       return res.send({
         statusCode: HttpStatus.BAD_REQUEST,
@@ -22,9 +22,12 @@ export class EncryptionMiddleware implements NestMiddleware {
     }
 
     try {
-       const decrypted =  JSON.parse(this.encryptionService.rsaDecrypt(req.body.securePayload, AppConfig.RSA_PRIVATE_KEY));
-       req.body.track2 = decrypted.track2;
-       req.body.pinData = decrypted.pinData
+
+      const track2 = JSON.parse(this.encryptionService.rsaDecrypt(req.headers.track2, AppConfig.RSA_PRIVATE_KEY));
+      const pinData = JSON.parse(this.encryptionService.rsaDecrypt(req.headers.pindata, AppConfig.RSA_PRIVATE_KEY));
+
+      req.body = {...req.body,track2:track2.track2,pinData:pinData.pinData}
+      console.log(req.body);
        next();
      } catch (e) {
       return res.status(HttpStatus.BAD_REQUEST).send({
